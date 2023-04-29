@@ -4,10 +4,12 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 2 {
-        panic!("
+        panic!(
+            "
 This program expects a string arguments with all the urls.
 Usage example: youtube-dl-rs 'url1 url2 url3'
-");
+"
+        );
     }
 
     // Collect them.
