@@ -2,7 +2,8 @@ use rayon::prelude::*;
 use std::io::BufRead;
 
 fn main() {
-    println!("Usage example:  echo -e 'foo \\n bar' | youtube-dl-rs");
+    println!("This program expects input from stdin.");
+    println!("Usage example:  echo -e 'url1 \\n url2 \\n url3' | youtube-dl-rs");
 
     // Collect them.
     let urls: Vec<String> = std::io::stdin()
