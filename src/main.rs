@@ -1,15 +1,21 @@
+use std::io::BufRead;
 use rayon::prelude::*;
 
 fn main() {
-    let urls = [
-        "https://ok.ru/video/5482599746078",
-        "https://ok.ru/video/5504564267550",
-        "https://ok.ru/video/5504386599454",
-        "https://ok.ru/video/5494500952606",
-        "https://ok.ru/video/5483643079198",
-        "https://ok.ru/video/5483236755998",
-    ];
+    println!("Usage example:  echo -e 'foo \\n bar' | youtube-dl-rs");
 
+    // Collect them.
+    let urls: Vec<String> = std::io::stdin().lock()
+        .lines()
+        .map(|l| {
+            match l {
+                Ok(v) => { return v.trim().to_owned(); }
+                Err(e) => { panic!("Failed to read line with error {e}"); }
+            }
+        })
+        .collect();
+
+    // Download them.
     urls.par_iter().for_each(|url| {
         println!("{}", format!("Downloading url {url}"));
         std::process::Command::new("youtube-dl")
