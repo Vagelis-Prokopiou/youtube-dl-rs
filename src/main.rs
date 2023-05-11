@@ -61,6 +61,8 @@ fn main() {
         })
         .collect();
 
+    let mut failed_urls = std::sync::Mutex::new(vec![]);
+
     // Download them.
     urls.par_iter().for_each(|url| {
         println!("Downloading url {url}");
@@ -81,6 +83,12 @@ fn main() {
         let output = command.output();
         match output {
             Ok(v) => {
+                let status = v.status;
+                if !status.success() {
+                    (failed_urls.lock())
+                        .expect("Failed to lock the Mutex")
+                        .push(url.clone());
+                }
                 std::io::stdout()
                     .write_all(&v.stdout)
                     .expect("Failed to propagate child process stdout");
@@ -95,4 +103,11 @@ fn main() {
             }
         }
     });
+
+    // Log the failures
+    let failed_urls = failed_urls.lock().unwrap();
+    if failed_urls.len() > 0 {
+        println!("\nThe following urls reported a non successful exit status:");
+        println!("{}", failed_urls.join("\n"));
+    }
 }
