@@ -1,28 +1,84 @@
+#![allow(clippy::needless_return)]
+
 use std::io::Write;
 use rayon::prelude::*;
 use youtube_dl_rs::is_valid_url;
+use youtube_dl_rs::models::*;
+use clap::Parser;
+
+
+/// Rust multithreaded wrapper over youtube-dl
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Video format code, see the "FORMAT SELECTION" for all the info
+    #[arg(short, long, default_value_t = Format::Default)]
+    format: Format,
+
+    // Handled internally
+    #[arg(hide = true, short)]
+    audio_format: Option<String>,
+
+    /// The url(s) to download
+    #[arg(required = true, value_name = "URL(s)")]
+    urls: Vec<String>,
+}
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let necessary_executables = ["youtube-dl", "ffmpeg"];
+    for necessary_executable in necessary_executables {
+        let result = std::process::Command::new("which").arg(necessary_executable).output();
+        match result {
+            Ok(output) => {
+                let result = String::from_utf8(output.stdout);
+                match result {
+                    Ok(v) => {
+                        if v.is_empty() {
+                            panic!("{necessary_executable} is not in the path. Try installing it.");
+                        }
+                    }
+                    Err(e) => { panic!("Checking for {necessary_executable} failed with error {e}"); }
+                }
+            }
+            Err(e) => { panic!("Checking for {necessary_executable} failed with error {e}"); }
+        }
+    }
 
-    // Validate and collect the urls.
+    let args = {
+        let mut _args = Args::parse();
+        if _args.format == Format::MP3 { _args.audio_format = Some("mp3".to_string()); }
+        _args
+    };
+
     let urls: Vec<String> = args
+        .urls
         .iter()
-        .skip(1)
         .map(|v| v.trim().to_owned())
-        .filter(|v| is_valid_url(v))
+        .filter(|url| {
+            if is_valid_url(url) { return true; }
+            println!("Url {url} is not valid. It has been skipped.");
+            return false;
+        })
         .collect();
 
     // Download them.
     urls.par_iter().for_each(|url| {
         println!("Downloading url {url}");
-        let output = std::process::Command::new("youtube-dl")
-            // Todo: Maybe add it after a related flag.
-            //.arg("--verbose")
+        let mut command = std::process::Command::new("youtube-dl");
+
+        // Removing the ids from the title.
+        command.arg("-o").arg("%(title)s.%(ext)s");
+
+        // Providing the format.
+        command.arg(url)
             .arg("-f")
-            .arg("best")
-            .arg(url)
-            .output();
+            .arg::<String>(args.format.into());
+
+        if let Some(v) = &args.audio_format {
+            // You have to provide the -x flag, to use the audio-format.
+            command.arg("-x").arg("--audio-format").arg(v.clone());
+        }
+        let output = command.output();
         match output {
             Ok(v) => {
                 std::io::stdout()
