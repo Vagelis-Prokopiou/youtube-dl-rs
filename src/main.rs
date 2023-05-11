@@ -61,7 +61,8 @@ fn main() {
         })
         .collect();
 
-    let mut failed_urls = std::sync::Mutex::new(vec![]);
+    // Keep the ones that failed, for logging.
+    let failed_urls = std::sync::Mutex::new(vec![]);
 
     // Download them.
     urls.par_iter().for_each(|url| {
@@ -108,6 +109,6 @@ fn main() {
     let failed_urls = failed_urls.lock().unwrap();
     if failed_urls.len() > 0 {
         println!("\nThe following urls reported a non successful exit status:");
-        println!("{}", failed_urls.join("\n"));
+        println!("{}", failed_urls.join(" "));
     }
 }
