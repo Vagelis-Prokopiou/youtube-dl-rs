@@ -2,7 +2,7 @@
 
 use std::io::Write;
 use rayon::prelude::*;
-use youtube_dl_rs::is_valid_url;
+use youtube_dl_rs::*;
 use youtube_dl_rs::models::*;
 use clap::Parser;
 
@@ -25,24 +25,7 @@ struct Args {
 }
 
 fn main() {
-    let necessary_executables = ["youtube-dl", "ffmpeg"];
-    for necessary_executable in necessary_executables {
-        let result = std::process::Command::new("which").arg(necessary_executable).output();
-        match result {
-            Ok(output) => {
-                let result = String::from_utf8(output.stdout);
-                match result {
-                    Ok(v) => {
-                        if v.is_empty() {
-                            panic!("{necessary_executable} is not in the path. Try installing it.");
-                        }
-                    }
-                    Err(e) => { panic!("Checking for {necessary_executable} failed with error {e}"); }
-                }
-            }
-            Err(e) => { panic!("Checking for {necessary_executable} failed with error {e}"); }
-        }
-    }
+    ensure_dependencies_are_installed();
 
     let args = {
         let mut _args = Args::parse();
@@ -112,3 +95,4 @@ fn main() {
         println!("{}", failed_urls.join("\n"));
     }
 }
+
