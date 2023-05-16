@@ -3,52 +3,18 @@
 use std::io::Write;
 use rayon::prelude::*;
 use youtube_dl_rs::*;
-use youtube_dl_rs::models::*;
-use clap::Parser;
-
-
-/// Rust multithreaded wrapper over youtube-dl
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Video format code, see the "FORMAT SELECTION" for all the info
-    #[arg(short, long, default_value_t = Format::Default)]
-    format: Format,
-
-    // Handled internally
-    #[arg(hide = true, short)]
-    audio_format: Option<String>,
-
-    /// The url(s) to download
-    #[arg(required = true, value_name = "URL(s)")]
-    urls: Vec<String>,
-}
 
 fn main() {
     ensure_dependencies_are_installed();
 
-    let args = {
-        let mut _args = Args::parse();
-        if _args.format == Format::MP3 { _args.audio_format = Some("mp3".to_string()); }
-        _args
-    };
-
-    let urls: Vec<String> = args
-        .urls
-        .iter()
-        .map(|v| v.trim().to_owned())
-        .filter(|url| {
-            if is_valid_url(url) { return true; }
-            println!("Url {url} is not valid. It has been skipped.");
-            return false;
-        })
-        .collect();
-
     // Keep the ones that failed, for logging.
     let failed_urls = std::sync::Mutex::new(vec![]);
 
+    let args = parse_args();
+    let valid_urls = get_valid_urls(&args.urls);
+
     // Download them.
-    urls.par_iter().for_each(|url| {
+    valid_urls.par_iter().for_each(|url| {
         println!("Downloading url {url}");
         let mut command = std::process::Command::new("youtube-dl");
 
@@ -95,4 +61,3 @@ fn main() {
         println!("{}", failed_urls.join("\n"));
     }
 }
-
